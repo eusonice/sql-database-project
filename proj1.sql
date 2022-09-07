@@ -151,6 +151,14 @@ AS
       WHERE yearid = 2016
     )
     WHERE yearid = 2016
+    UNION ALL
+    SELECT salary, minS, CAST((salary - minS) / binW AS INT) - 1 AS binN, binW
+    FROM salaries, (
+      SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
+      FROM salaries
+      WHERE yearid = 2016
+    )
+    WHERE yearid = 2016 AND salary = maxS
   )
   ON binid = binN
   GROUP BY binid
