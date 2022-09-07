@@ -142,19 +142,41 @@ AS
 -- Question 4ii
 CREATE VIEW q4ii(binid, low, high, count)
 AS
-  WITH binids() AS (
-    SELECT 
+  SELECT binid, minS + binid * binW, minS + (binid + 1) * binW, COUNT(*)
+  FROM binids INNER JOIN (
+    SELECT salary, minS, CAST((salary - minS) / binW AS INT) AS binN, binW
+    FROM salaries, (
+      SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
+      FROM salaries
+      WHERE yearid = 2016
+    )
+    WHERE yearid = 2016
   )
+  ON binid = binN
+  GROUP BY binid
 ;
 
 -- Question 4iii
 CREATE VIEW q4iii(yearid, mindiff, maxdiff, avgdiff)
 AS
-  SELECT yearid, (MIN(salary) - MIN(salary)), (MAX(yearid) - MAX(yearid - 1)), (AVG(yearid) - AVG(yearid - 1))
-  FROM people p INNER JOIN salaries s
-  ON p.playerid = s.playerid
-  GROUP BY yearid
-  ORDER BY yearid
+  SELECT s1.yearid, s1.minS - s2.minS, s1.maxS - s2.maxS, s1.avgS - s2.avgS
+  FROM (
+    SELECT yearid, MIN(salary) AS minS, MAX(salary) AS maxS, AVG(salary) AS avgS
+    FROM salaries
+    GROUP BY yearid
+  ) s1 INNER JOIN (
+    SELECT yearid, MIN(salary) AS minS, MAX(salary) AS maxS, AVG(salary) AS avgS
+    FROM salaries
+    GROUP BY yearid
+  ) s2
+  ON s1.yearid = s2.yearid + 1
+  GROUP BY s1.yearid
+  ORDER BY s1.yearid
+  --SELECT s1.yearid, MIN(s1.salary) - MIN(s2.salary), MAX(s1.salary) - MAX(s2.salary), AVG(s1.salary) - AVG(s2.salary)
+  --FROM salaries s1 INNER JOIN salaries s2
+  --ON s1.yearid = s2.yearid + 1
+  --GROUP BY s1.yearid
+  --ORDER BY s1.yearid
 ;
 
 -- Question 4iv
@@ -173,18 +195,18 @@ AS
     GROUP BY yearid
   )
 ;
+
 -- Question 4v
-CREATE VIEW q4v(team, diffAvg) AS
--- Each team has at least 1 All Star and may have multiple. 
--- For each team in the year 2016, give the teamid and diffAvg 
--- (the difference between the team's highest paid all-star's salary 
--- and the team's lowest paid all-star's salary).
-  SELECT s.teamid, MAX(salary) - MIN(salary)
-  FROM people p INNER JOIN salaries s
-  ON p.playerid = s.playerid
-  INNER JOIN allstarfull asf
-  ON p.playerid = asf.playerid
-  WHERE s.yearid = 2016
-  GROUP BY s.teamid
+CREATE VIEW q4v(team, diffAvg) 
+AS
+  SELECT teamid, maxS - minS
+  FROM (
+    SELECT asf.teamid AS teamid, MAX(salary) AS maxS, MIN(salary) AS minS
+    FROM allstarfull asf INNER JOIN salaries s
+    ON asf.playerid = s.playerid
+    AND asf.yearid = s.yearid
+    WHERE asf.yearid = 2016
+    GROUP BY asf.teamid
+  )
 ;
 
