@@ -142,26 +142,53 @@ AS
 -- Question 4ii
 CREATE VIEW q4ii(binid, low, high, count)
 AS
-  SELECT binid, minS + binid * binW, minS + (binid + 1) * binW, COUNT(*)
-  FROM binids INNER JOIN (
-    SELECT salary, minS, CAST((salary - minS) / binW AS INT) AS binN, binW
-    FROM salaries, (
-      SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
-      FROM salaries
-      WHERE yearid = 2016
-    )
+  WITH size(width, minS, maxS) AS (
+    SELECT (MAX(salary) - MIN(salary)) / 10.0, MIN(salary), MAX(salary)
+    FROM salaries
     WHERE yearid = 2016
-    UNION ALL
-    SELECT salary, minS, CAST((salary - minS) / binW AS INT) - 1 AS binN, binW
-    FROM salaries, (
-      SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
-      FROM salaries
+  ), boundaries(binid, low, high, width, minS, maxS) AS (
+    SELECT binid, minS + binid * width, minS + (binid + 1) * width, width, minS, maxS
+    FROM binids, size
+  ), counting(binid, total) AS (
+    SELECT boundaries.binid AS joinid, count(instance) AS total
+    FROM boundaries LEFT OUTER JOIN (
+      SELECT binid AS binN, salary AS instance
+      FROM boundaries LEFT OUTER JOIN salaries
+      ON binid = CAST((salary - minS) / width AS INT)
       WHERE yearid = 2016
-    )
-    WHERE yearid = 2016 AND salary = maxS
+      UNION ALL 
+      SELECT binid AS binN, salary AS instance
+      FROM boundaries LEFT OUTER JOIN salaries
+      ON binid = CAST(((salary - minS) / width) - 1 AS INT)
+      WHERE yearid = 2016 AND salary = maxS
+    ) AS countS
+    ON boundaries.binid = binN
+    GROUP BY boundaries.binid
+    ORDER BY boundaries.binid
   )
-  ON binid = binN
-  GROUP BY binid
+  SELECT boundaries.binid, low, high, total
+  FROM boundaries LEFT OUTER JOIN counting
+  ON boundaries.binid = counting.binid
+  --SELECT binid, minS + binid * binW, minS + (binid + 1) * binW, COUNT(*)
+  --FROM binids LEFT OUTER JOIN (
+  --  SELECT salary, minS, CAST((salary - minS) / binW AS INT) AS binN, binW
+  --  FROM salaries, (
+  --    SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
+  --    FROM salaries
+  --    WHERE yearid = 2016
+  --  )
+  --  WHERE yearid = 2016
+  --  UNION ALL
+  --  SELECT salary, minS, CAST((salary - minS) / binW AS INT) - 1 AS binN, binW
+  --  FROM salaries, (
+  --    SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
+  --    FROM salaries
+  --    WHERE yearid = 2016
+  --  )
+  --  WHERE yearid = 2016 AND salary = maxS
+  --)
+  --ON binid = binN
+  --GROUP BY binid
 ;
 
 -- Question 4iii
