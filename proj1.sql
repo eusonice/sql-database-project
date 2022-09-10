@@ -104,6 +104,18 @@ AS
 -- Question 3ii
 CREATE VIEW q3ii(playerid, namefirst, namelast, lslg)
 AS
+  WITH topT(playerid, lslg) AS (
+    SELECT b.playerid AS playerid, (SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab) AS lslg
+    FROM batting b
+    GROUP BY b.playerid
+    HAVING SUM(ab) > 50
+  )
+  SELECT p.playerid, namefirst, namelast, lslg
+  FROM people p INNER JOIN topT
+  ON p.playerid = topT.playerid
+  ORDER BY lslg DESC, p.playerid
+  LIMIT 10
+  /*
   SELECT p.playerid, namefirst, namelast, (SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab)
   FROM people p LEFT OUTER JOIN batting b
   ON p.playerid = b.playerid
@@ -111,11 +123,28 @@ AS
   HAVING SUM(ab) > 50
   ORDER BY (SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab) DESC, p.playerid
   LIMIT 10
+  */
 ;
 
 -- Question 3iii
 CREATE VIEW q3iii(namefirst, namelast, lslg)
 AS
+  WITH lstP(playerid, lslg) AS (
+    SELECT b.playerid AS playerid, (SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab) AS lslg
+    FROM batting b
+    GROUP BY b.playerid
+    HAVING SUM(ab) > 50 AND ((SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab)) > (
+      SELECT (SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab)
+      FROM people p LEFT OUTER JOIN batting b
+      ON p.playerid = b.playerid
+      WHERE p.playerid = 'mayswi01'
+    )
+  )
+  SELECT namefirst, namelast, lslg
+  FROM people p INNER JOIN lstP
+  ON p.playerid = lstP.playerid
+  ORDER BY lslg DESC, p.playerid
+  /*
   SELECT namefirst, namelast, (SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab)
   FROM people p LEFT OUTER JOIN batting b
   ON p.playerid = b.playerid
@@ -127,6 +156,7 @@ AS
     WHERE p.playerid = 'mayswi01'
   )
   ORDER BY (SUM(h) + SUM(h2b) + 2.0 * SUM(h3b) + 3.0 * SUM(hr)) / SUM(ab) DESC, p.playerid
+  */
 ;
 
 -- Question 4i
@@ -169,26 +199,28 @@ AS
   SELECT boundaries.binid, low, high, total
   FROM boundaries LEFT OUTER JOIN counting
   ON boundaries.binid = counting.binid
-  --SELECT binid, minS + binid * binW, minS + (binid + 1) * binW, COUNT(*)
-  --FROM binids LEFT OUTER JOIN (
-  --  SELECT salary, minS, CAST((salary - minS) / binW AS INT) AS binN, binW
-  --  FROM salaries, (
-  --    SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
-  --    FROM salaries
-  --    WHERE yearid = 2016
-  --  )
-  --  WHERE yearid = 2016
-  --  UNION ALL
-  --  SELECT salary, minS, CAST((salary - minS) / binW AS INT) - 1 AS binN, binW
-  --  FROM salaries, (
-  --    SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
-  --    FROM salaries
-  --    WHERE yearid = 2016
-  --  )
-  --  WHERE yearid = 2016 AND salary = maxS
-  --)
-  --ON binid = binN
-  --GROUP BY binid
+  /*
+  SELECT binid, minS + binid * binW, minS + (binid + 1) * binW, COUNT(*)
+  FROM binids LEFT OUTER JOIN (
+    SELECT salary, minS, CAST((salary - minS) / binW AS INT) AS binN, binW
+    FROM salaries, (
+      SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
+      FROM salaries
+      WHERE yearid = 2016
+    )
+    WHERE yearid = 2016
+    UNION ALL
+    SELECT salary, minS, CAST((salary - minS) / binW AS INT) - 1 AS binN, binW
+    FROM salaries, (
+      SELECT (MAX(salary) - MIN(salary)) / 10.0 AS binW, MAX(salary) AS maxS, MIN(salary) AS minS
+      FROM salaries
+      WHERE yearid = 2016
+    )
+    WHERE yearid = 2016 AND salary = maxS
+  )
+  ON binid = binN
+  GROUP BY binid
+  */
 ;
 
 -- Question 4iii
@@ -205,18 +237,42 @@ AS
     GROUP BY yearid
   ) s2
   ON s1.yearid = s2.yearid + 1
+  ORDER BY s1.yearid
+  /*
+  SELECT s1.yearid, MIN(s1.salary) - MIN(s2.salary), MAX(s1.salary) - MAX(s2.salary), AVG(s1.salary) - AVG(s2.salary)
+  FROM salaries s1 INNER JOIN salaries s2
+  ON s1.yearid = s2.yearid + 1
   GROUP BY s1.yearid
   ORDER BY s1.yearid
-  --SELECT s1.yearid, MIN(s1.salary) - MIN(s2.salary), MAX(s1.salary) - MAX(s2.salary), AVG(s1.salary) - AVG(s2.salary)
-  --FROM salaries s1 INNER JOIN salaries s2
-  --ON s1.yearid = s2.yearid + 1
-  --GROUP BY s1.yearid
-  --ORDER BY s1.yearid
+  */
 ;
 
 -- Question 4iv
 CREATE VIEW q4iv(playerid, namefirst, namelast, salary, yearid)
 AS
+  SELECT playerid, namefirst, namelast, salary, yearid
+  FROM (
+    SELECT p.playerid AS playerid, namefirst, namelast, MAX(salary) AS salary, yearid
+    FROM people p INNER JOIN salaries s
+    ON p.playerid = s.playerid
+    WHERE yearid = 2000 AND salary >= (
+      SELECT MAX(salary)
+      FROM people p INNER JOIN salaries s
+      ON p.playerid = s.playerid
+      WHERE yearid = 2000
+    )
+    UNION ALL
+    SELECT p.playerid, namefirst, namelast, MAX(salary), yearid
+    FROM people p INNER JOIN salaries s
+    ON p.playerid = s.playerid
+    WHERE yearid = 2001 AND salary >= (
+      SELECT MAX(salary)
+      FROM people p INNER JOIN salaries s
+      ON p.playerid = s.playerid
+      WHERE yearid = 2001
+    )
+  ) AS twoY
+  /*
   SELECT p.playerid, namefirst, namelast, MAX(salary), yearid
   FROM people p INNER JOIN salaries s
   ON p.playerid = s.playerid
@@ -229,6 +285,7 @@ AS
     WHERE yearid = 2000 OR yearid = 2001
     GROUP BY yearid
   )
+  */
 ;
 
 -- Question 4v
