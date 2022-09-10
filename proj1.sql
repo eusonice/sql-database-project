@@ -250,6 +250,20 @@ AS
 -- Question 4iv
 CREATE VIEW q4iv(playerid, namefirst, namelast, salary, yearid)
 AS
+  WITH maxS(yearid, salary) AS (
+    SELECT yearid, MAX(salary)
+    FROM salaries s
+    WHERE yearid = 2000 OR yearid = 2001
+    GROUP BY yearid
+  ), maxP(playerid, yearid, salary) AS (
+    SELECT s.playerid, maxS.yearid, s.salary
+    FROM maxS INNER JOIN salaries s
+    ON maxS.salary = s.salary AND maxS.yearid = s.yearid
+  )
+  SELECT maxP.playerid, namefirst, namelast, salary, yearid
+  FROM maxP INNER JOIN people p
+  ON maxP.playerid = p.playerid
+  /*
   SELECT playerid, namefirst, namelast, salary, yearid
   FROM (
     SELECT p.playerid AS playerid, namefirst, namelast, MAX(salary) AS salary, yearid
@@ -272,6 +286,7 @@ AS
       WHERE yearid = 2001
     )
   ) AS twoY
+  */
   /*
   SELECT p.playerid, namefirst, namelast, MAX(salary), yearid
   FROM people p INNER JOIN salaries s
