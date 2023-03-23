@@ -1,6 +1,6 @@
 # SQL
 
-Practicing SQL using SQLite, working with [Lahman baseball database] (https://www.seanlahman.com/baseball-archive/statistics/)
+Practicing SQL using SQLite, working with Lahman baseball database: https://www.seanlahman.com/baseball-archive/statistics/
 
 ```sql
 -- 0
