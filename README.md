@@ -1,4 +1,4 @@
-# SQL Project
+# SQL Database Project
 
 Practicing SQL using SQLite, working with Lahman baseball database: https://www.seanlahman.com/baseball-archive/statistics/
 
